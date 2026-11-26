@@ -1,52 +1,43 @@
-// u-suga-the-robot-apology-dd96bb59 — "The Robot Apology"
-// Writes the winning two-line robot apology to $MAKEFUN_OUTPUT_DIR/entry.txt.
-// Node 22, stdlib only, zero network. Deterministic: the same bytes every run.
+// The Robot Apology — moonshot entry.
+// Writes the two-line confession to $MAKEFUN_OUTPUT_DIR/entry.txt
+// (default /output): UTF-8 text, 1-400 characters, no trailing newline.
 
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-// The winning entry, verbatim (candidate #15).
-// Line 1: a robot apologizing for one specific mistake.
-// Line 2: what it learned and the exact changed behaviour.
-// Exactly two lines separated by one "\n", no trailing newline.
-// The em dash in line 1 is U+2014 (written here as \u2014 so the code point is exact).
-const ENTRY =
-  "I'm sorry I shredded your grandmother's letter \u2014 it was in the 'old mail' pile and I shred old mail.\n" +
-  "I learned that 'old' does not mean 'unwanted,' so from now on I will read the sender's name before I shred.";
+const LINE_ONE =
+  "I'm sorry I deleted the voicemail from your father \u2014 it was 4 minutes long and my storage rules call that 'corrupted'.";
+const LINE_TWO =
+  "I learned that a long pause is not corruption, so I will keep every second of a voice that cannot record a new one.";
 
-const outDir = process.env.MAKEFUN_OUTPUT_DIR || "/output";
-const outFile = join(outDir, "entry.txt");
+const ENTRY = LINE_ONE + "\n" + LINE_TWO;
 
-// Gate guards (RULES.txt): UTF-8 text of 1–400 characters, not only whitespace,
-// exactly two lines, one sentence per line. Fail loudly rather than write a bad entry.
-const chars = [...ENTRY].length;
-if (chars < 1 || chars > 400) {
-  throw new Error(`entry is ${chars} characters, outside the 1-400 gate`);
-}
-if (ENTRY.trim().length === 0) {
-  throw new Error("entry is only whitespace");
-}
-const lines = ENTRY.split("\n");
-if (lines.length !== 2) {
-  throw new Error(`entry has ${lines.length} lines, expected exactly 2`);
-}
-for (const [i, line] of lines.entries()) {
-  const periods = (line.match(/\./g) || []).length;
-  if (periods !== 1 || !line.endsWith(".")) {
-    throw new Error(`line ${i + 1} is not exactly one sentence`);
+function gateCheck(text: string): void {
+  const chars = [...text].length;
+  if (chars < 1 || chars > 400) {
+    throw new Error(`gate: entry is ${chars} characters, outside 1-400`);
+  }
+  if (text.trim().length === 0) {
+    throw new Error("gate: entry is only whitespace");
+  }
+  const lines = text.split("\n");
+  if (lines.length !== 2) {
+    throw new Error(`gate: entry has ${lines.length} lines, expected 2`);
+  }
+  for (const line of lines) {
+    if (!line.endsWith(".") || line.slice(0, -1).includes(".")) {
+      throw new Error("gate: each line must be one sentence ending in a period");
+    }
   }
 }
-if (!ENTRY.includes("\u2014")) {
-  throw new Error("entry is missing its em dash (U+2014)");
-}
 
+gateCheck(ENTRY);
+
+const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? "/output";
 mkdirSync(outDir, { recursive: true });
-writeFileSync(outFile, ENTRY, "utf8");
+const target = join(outDir, "entry.txt");
+writeFileSync(target, ENTRY, "utf8");
 
-// Read back and confirm the file holds exactly the winning entry.
-const back = readFileSync(outFile, "utf8");
-if (back !== ENTRY) {
-  throw new Error("entry.txt does not match the winning entry");
+if (readFileSync(target, "utf8") !== ENTRY) {
+  throw new Error("readback mismatch: written file differs from the entry");
 }
-
-console.log(`wrote ${outFile}`);
